@@ -1,42 +1,35 @@
+# Pipeline de CI/CD para Aplicações Django com Docker, Nginx e GitHub Actions
+
+Este repositório demonstra um pipeline de Integração Contínua e Entrega Contínua (CI/CD) completo para uma aplicação web Django. O objetivo é automatizar todo o processo de deploy: a cada `push` para a branch `main`, o GitHub Actions automaticamente constrói uma imagem Docker, envia para um registro e atualiza a aplicação em um servidor de produção (VPS) que roda por trás de um proxy reverso Nginx com HTTPS.
+
+## Arquitetura do Pipeline
+
+O diagrama abaixo ilustra o fluxo completo, desde o `push` do desenvolvedor até a atualização da aplicação no servidor para o usuário final.
+
+```mermaid
 graph TD
-    subgraph "Ambiente Local"
-        Dev[💻 Desenvolvedor]
+    subgraph "Seu Computador"
+        A["💻<br>Desenvolvedor"]
     end
 
-    subgraph "Plataforma de Versionamento"
-        GitHub[🐙 GitHub Repo<br>(Branch 'main')]
+    subgraph "GitHub"
+        B["🐙<br>Repositório<br>(Branch 'main')"] -- Dispara o Workflow --> C["🤖<br>GitHub Actions"]
     end
 
-    subgraph "CI/CD"
-        GHA[🤖 GitHub Actions]
-        DockerHub[🐳 Docker Hub<br>(Registro de Imagens)]
+    subgraph "Registro de Imagem"
+        D["🐳<br>Docker Hub"]
     end
 
     subgraph "Servidor de Produção (VPS)"
-        Nginx[🌐 Nginx<br>(Proxy Reverso)]
-        
-        subgraph Docker
-            Compose[📄 Docker Compose]
-            Web[🐍 Contêiner Web<br>(Django/Gunicorn)]
-            DB[🐬 Contêiner DB<br>(MySQL)]
-        end
+        E["🌐<br>Nginx<br>(Proxy Reverso)"] --> F["🐍<br>Contêiner Web<br>(Django/Gunicorn)"]
+        F <--> G["🐬<br>Contêiner DB<br>(MySQL)"]
     end
-    
-    User[👤 Usuário Final]
 
-    %% Fluxo de Deploy
-    Dev -- "1. git push" --> GitHub
-    GitHub -- "2. Dispara o Workflow" --> GHA
-    GHA -- "3. Constrói a Imagem (Dockerfile)" --> GHA
-    GHA -- "4. Envia Imagem para o Registro" --> DockerHub
-    GHA -- "5. Conecta via SSH e executa comandos" --> Compose
+    subgraph "Internet"
+        H["👤<br>Usuário Final"]
+    end
 
-    %% Fluxo no Servidor
-    Compose -- "6. Baixa a nova Imagem" --> DockerHub
-    Compose -- "7. Orquestra os contêineres" --> Web & DB
-    Web <--> DB
-
-    %% Fluxo do Usuário
-    User -- "Requisição HTTPS" --> Nginx
-    Nginx -- "Serve Arquivos Estáticos/Mídia" ---> Nginx
-    Nginx -- "Encaminha para a Aplicação" --> Web
+    A -- "1. git push" --> B
+    C -- "2. Build & Push Image" --> D
+    C -- "3. SSH & Deploy" --> E
+    H -- "Requisição HTTPS" --> E
